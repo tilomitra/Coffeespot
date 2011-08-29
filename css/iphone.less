@@ -2,13 +2,15 @@
 @white: #fff;
 @black: #000;
 @grey: #615e5e;
+@darkBlue: #1b222b;
+
 
 
 /* DIMENSIONS */
 @deviceWidth: 320px;
 @deviceHeight: 460px;
 //this is width after taking padding of the background into account
-@width: 290px;
+@width: 290px; 
 
 
 /* MIXINS */
@@ -29,12 +31,18 @@
 	-webkit-border-radius: @radius;
 }
 
-
+.arrow-down(@size: 10px, @color: @darkBlue) {
+	width: 0;
+	height: 0;
+	border-left: @size solid transparent;
+	border-right: @size solid transparent;
+	border-top: @size solid @color;
+}
 
 body.iphone {
 	width: @deviceWidth;
 	height: @deviceHeight;
-	background:@white;
+	background:@black;
 	border:none;
 	margin:0;
 	padding:0;
@@ -56,13 +64,14 @@ body.iphone {
 		text-decoration:none;
 	}
 	.wrapper {
+		@padding-top: 47px;
 		background: transparent url(../img/board-bg-retina.png) no-repeat fixed 0 0;
 		background-size: @deviceWidth @deviceHeight;
 		width: @deviceWidth;
-		height: @deviceHeight;
+		height: @deviceHeight - @padding-top;
 		border:none;
 		overflow:hidden;
-		padding: 47px 12px 0px 0px;
+		padding: @padding-top 0px 0px 0px;
 		text-align:center;
 	}
 	.landing {
@@ -82,10 +91,31 @@ body.iphone {
 	}
 
 	.yui3-panel-content {
-		background: transparent url(.././img/popover-bg.png) repeat-x fixed 0 0;
-		.box-shadow(0px,0px,10px,@black);
-		padding: 7px;
+		background: transparent url(../img/popover-bg.png) repeat-x;
+		.border-radius(5px);
+		.box-shadow(0px,0px,10px,lighten(@black, 50%));
+		padding: 11px;
 		color: @white;
+			
+			button {
+				margin: 3px 0;
+			}
+
+			.yui3-widget-hd {
+				text-align:center;
+			}
+
+			h2 {
+				margin-bottom: 15px;
+			}
+	}
+	.yui3-overlay-pointer {
+		position: absolute;
+		display: block;
+		bottom: -10px;
+		left: 50%;
+		margin-left: -10px;
+		.arrow-down();
 	}
 }
 

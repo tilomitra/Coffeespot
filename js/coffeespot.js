@@ -6,7 +6,6 @@ YUI.add('coffeespot', function(Y) {
 	Y.LocationModel = Y.Base.create('locationModel', Y.Model, [Y.ModelSync.YQL], {
 
 	  queryString: 'select * from geo.placefinder where text="{latitude}, {longitude}" AND gflags="R"',
-	  cache: new Y.CacheOffline,
 	  buildQuery: function(options) {
 	  	return Y.Lang.sub(options.query, { 
 	  		latitude: options.latitude,
@@ -423,9 +422,9 @@ YUI.add('coffeespot', function(Y) {
 
 		render: function () {
 
-			if (!this.popover) {
+			if (Y.Lang.isUndefined(this.popover)) {
 				this.popover = new Y.Panel({
-					headerContent: this.model.get('name'),
+					headerContent: '<h2>' + this.model.get('name') + '</h2>',
 					bodyContent: this.container.getContent(),
 					width: 290,
 					zIndex: 200, //google maps seems to be around 100 so 200 is a safe zIndex
@@ -437,13 +436,14 @@ YUI.add('coffeespot', function(Y) {
 					buttons: [],
 					hideOn: [{
 						eventName: 'clickoutside'
-					}]
+					}],
+					plugins: [Y.Plugin.OverlayPointer]
 				});
 				this.popover.render();
 			}
 
 			else {
-				this.popover.set('headerContent', this.model.get('name'));
+				this.popover.set('headerContent', '<h2>' + this.model.get('name') + '</h2>');
 				this.popover.set('align', {
 					node: '#' + this.model.get('id'),
 					points: ["bc", "tc"]
@@ -554,6 +554,9 @@ YUI.add('coffeespot', function(Y) {
 	     	if (!this.storeDetailView) {
 	     		this.storeDetailView = new Y.StoreDetailView({model: store});
 	     	}
+	     	else {
+	     		this.storeDetailView.model = store;
+	     	}
 	     	this.storeDetailView.render();
 	     },
 
@@ -601,6 +604,6 @@ YUI.add('coffeespot', function(Y) {
 
 
 
-}, '3.4.0', { requires: ['app', 'node-load', 'gallery-geo', 'gallery-model-sync-yql', 'event-flick', 'cache-offline', 'scrollview', 'panel'] });
+}, '3.4.0', { requires: ['app', 'node-load', 'gallery-geo', 'gallery-model-sync-yql', 'gallery-overlay-extras', 'event-flick', 'cache-offline', 'scrollview', 'panel'] });
 
 
