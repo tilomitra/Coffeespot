@@ -16,11 +16,7 @@
 
 	 <script src="js/less-1.1.3.min.js" type="text/javascript"></script>
 	<!-- YUI -->
-	 <script src="http://yui.yahooapis.com/3.4.0/build/yui/yui-min.js"></script>
-
-	 <!--OAuth -->
-	 <script type="text/javascript" src="http://oauth.googlecode.com/svn/code/javascript/oauth.js"></script>
-	 <script type="text/javascript" src="http://oauth.googlecode.com/svn/code/javascript/sha1.js"></script>
+	 <script src="http://yui.yahooapis.com/3.4.0/build/yui/yui-debug.js"></script>
 
 
 </head>
@@ -35,71 +31,36 @@
 
 	</div>
 
+
+	<script type="text/x-template" id="locate-template">
+		<div id="location" class="yui3-u-1"></div>
+		<div id="map" style="width: 288px; height: 150px" class="yui3-u"></div>
+		<div id="resultList" class="yui3-u-1"><ul class="yui3-u-1"></ul></div>
+	</script>
+
+	<script type="text/x-template" id="store-template">
+		<div id="store-info" class="yui-u-3-4">
+			<button class="shiny-blue yui3-u-1">View on Yelp.com</button>
+			<button class="shiny-blue yui3-u-1">Open in Maps</button>
+		</div>
+	</script>
+
+
+
 	<script src="js/coffeespot.js"></script>
 	 <script>
-	 	YUI().use('coffeespot', function(Y) {
-	 		new Y.CoffeeSpotAppView();
+	 	YUI({filter:'raw', gallery: 'gallery-2011.08.24-23-44'}).use('coffeespot', function(Y) {
+	 		var controller = new Y.CoffeeSpot();
 
 	 		//load google maps async.
 	 		var script = document.createElement("script");
 	 		script.type = "text/javascript";
 	 		script.src = "http://maps.googleapis.com/maps/api/js?sensor=false&callback=initialize";
 	 		document.body.appendChild(script);
-	 	});
 
+	 	});
 	 	function initialize () {
 	 		
 	 	}
 	 </script>
-
-	 // <script type="text/javascript">
-	 // var auth = {
-	 //   //
-	 //   // Update with your auth tokens
-	 //   //
-	 //   consumerKey: "FD-n1RPoINWFHRu4S-XJCw",
-	 //   consumerSecret: "XX5nZOT9VAhGpdJ6EEc-0v2G4io",
-	 //   accessToken: "rymgd1hvTUNJKYJZqqEueR6CQ115N9PL",
-	 //   accessTokenSecret: "b1DjJLVSGnY4GNnHgO2K3TUVPNk",
-	 //   serviceProvider: {
-	 //     signatureMethod: "HMAC-SHA1"
-	 //   }
-	 // };
-
-	 // var accessor = {
-	 //   consumerSecret: auth.consumerSecret,
-	 //   tokenSecret: auth.accessTokenSecret
-	 // };
-
-	 // parameters = [];
-	 // parameters.push(['callback', 'cb']);
-	 // parameters.push(['oauth_consumer_key', auth.consumerKey]);
-	 // parameters.push(['oauth_consumer_secret', auth.consumerSecret]);
-	 // parameters.push(['oauth_token', auth.accessToken]);
-	 // parameters.push(['oauth_signature_method', 'HMAC-SHA1']);
-
-	 // var message = {
-	 //   'action': 'http://api.yelp.com/v2/business/bay-to-breakers-12k-san-francisco',
-	 //   'method': 'GET',
-	 //   'parameters': parameters
-	 // };
-
-	 // OAuth.setTimestampAndNonce(message);
-	 // OAuth.SignatureMethod.sign(message, accessor);
-
-	 // var parameterMap = OAuth.getParameterMap(message.parameters);
-	 // console.log(parameterMap);
-
-	 // $.ajax({
-	 //   'url': message.action,
-	 //   'data': parameterMap,
-	 //   'dataType': 'jsonp',
-	 //   'jsonpCallback': 'cb',
-	 //   'success': function(data, textStats, XMLHttpRequest) {
-	 //     console.log(data);
-	 //     var output = prettyPrint(data);
-	 //     $("body").append(output);
-	 //   }
-	 // });
-	 // </script>
 </body>

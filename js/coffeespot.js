@@ -1,83 +1,111 @@
 YUI.add('coffeespot', function(Y) {
 
-
 	/* LOCATION MODEL */
 
 	//create a location model class to store latitude longitude
-	Y.LocationModel = Y.Base.create('locationModel', Y.Model, [], {
-	  // Add prototype methods for your Model here if desired. These methods will be
-	  // available to all instances of your Model.
+	Y.LocationModel = Y.Base.create('locationModel', Y.Model, [Y.ModelSync.YQL], {
 
-	  // Returns true if all the slices of the pie have been eaten.
-	  hasStoredLocation: function () {
-	  	var location = this.get('location');
-	  	if (!location.latitude && !location.longitude) {
-	  		return false;
-	  	}
-	  	else {
-	  		return true;
-	  	}
+	  queryString: 'select * from geo.placefinder where text="{latitude}, {longitude}" AND gflags="R"',
+	  cache: new Y.CacheOffline,
+	  buildQuery: function(options) {
+	  	return Y.Lang.sub(options.query, { 
+	  		latitude: options.latitude,
+	  		longitude: options.longitude
+	  	});
 	  },
 
 	  //gets geolocation using HTML5
 	  findLocation: function () {
-	  	var self = this;
-	  	Y.Geo.getCurrentPosition(function(response) {
-	  	
-  	       //check to see if it was successful
-  	       if (response.success){
-  	       		var o = {latitude: response.coords.latitude, longitude: response.coords.longitude};
-  	       		self.set('location', o);
+		var self = this;
+		Y.Geo.getCurrentPosition(function(response) {
+		
+		   //check to see if it was successful
+		   if (response.success){
+				var o = {latitude: response.coords.latitude, longitude: response.coords.longitude};
+				self.set('location', o);
 
-  	       		self.findPhysicalLocation();
+				self.findPhysicalLocation();
 
-  	       }
-  	       else {
-  	       	return response.message;
-  	       }
-  	   });
+		   }
+		   else {
+			return response.message;
+		   }
+	   });
 	  },
 
+
+
 	  findPhysicalLocation: function() {
-	  	var loc = this.get('location'),
-	  	lat = loc.latitude + '',
-	  	lng = loc.longitude + '',
-	  	q = 'select * from geo.placefinder where text="' + lat + ', ' + lng + '" AND gflags="R"',
-	  	self = this;
+		var loc = this.get('location'),
+		lat = loc.latitude + '',
+		lng = loc.longitude + '',
+		self = this,
+		cb = function(error, r) {
+			if (r.Result) {
+				self.set('address', r.Result.line1 + ', ' + r.Result.city);
+				self.set('city', r.Result.city);
+				self.set('woeid', r.Result.woeid);
+				self.set('postal', r.Result.postal);
+				self.set('zip', r.Result.uzip);
+			}
 
-	  	Y.YQL(q, function(r) {
+			self.fire('physicalLocationChange', r.Result);
+		},
+		options = {
+			query: this.queryString,
+			latitude: lat,
+			longitude: lng
+		};
+		this.load(options, cb);
+		
+	  },
 
-	  		if (r.query.results.Result) {
-	  			self.set('city', r.query.results.Result.city);
-	  			self.set('woeid', r.query.results.Result.woeid);
-	  			self.set('zip', r.query.results.Result.uzip);
-	  		}
-	  	});
+	  //This script calculates great-circle distances between the two points 
+	  //– that is, the shortest distance over the earth’s surface – using the ‘Haversine’ formula.
+	  //http://stackoverflow.com/questions/27928/how-do-i-calculate-distance-between-two-latitude-longitude-points
+	  findDistanceFromStore: function (lat,lng) {
+	  	var lat2 = this.get('location').latitude,
+	  	lng2 = this.get('location').longitude,
+	  	R = 6371; // Radius of the earth in km
+	  	dLat = (lat2-lat).toRad(),  // Javascript functions in radians
+	  	dLon = (lng2-lng).toRad(),
+	  	a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+	  	        Math.cos(lat1.toRad()) * Math.cos(lat2.toRad()) * 
+	  	        Math.sin(dLon/2) * Math.sin(dLon/2),
+	  	c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)),
+	  	d = (R * c)*0.621371192; // Distance in miles
+
+	  	return d;
 	  }
 	}, {
 	  ATTRS: {
-	    // Add custom model attributes here. These attributes will contain your
-	    // model's data. See the docs for Y.Attribute to learn more about defining
-	    // attributes.
+		// Add custom model attributes here. These attributes will contain your
+		// model's data. See the docs for Y.Attribute to learn more about defining
+		// attributes.
 
-	    location: {
-	      value: {
-	      	latitude: undefined,
-	      	longitude: undefined
+		location: {
+		  value: {
+			latitude: undefined,
+			longitude: undefined
 		  }
-	    },
+		},
+		address: {
+			value:undefined
+		},
+		city: {
+			value: undefined
+		},
 
-	    city: {
-	    	value: undefined
-	    },
+		woeid: {
+			value: undefined
+		},
 
-	    woeid: {
-	    	value: undefined
-	    },
-
-	    zip: {
-	    	value: undefined
-	    }
+		zip: {
+			value: undefined
+		},
+		postal: {
+			value: undefined
+		}
 
 	  }
 	});
@@ -90,37 +118,41 @@ YUI.add('coffeespot', function(Y) {
 
 
 
-	// Create a new Y.PieModel class that extends Y.Model.
-	// Y.YelpModel = Y.Base.create('yelpModel', Y.Model, [], {
-	//   // Add prototype methods for your Model here if desired. These methods will be
-	//   // available to all instances of your Model.
-
-	//   // Returns true if all the slices of the pie have been eaten.
-	//   hasStoredLocation: function () {
-	//   	var location = this.get('location');
-	//   	if (!location.latitude && location.longitude) {
-	//   		return false;
-	//   	}
-	//   	else {
-	//   		return true;
-	//   	}
-	//   },
-	// }, {
-	//   ATTRS: {
-	//     // Add custom model attributes here. These attributes will contain your
-	//     // model's data. See the docs for Y.Attribute to learn more about defining
-	//     // attributes.
-
-	//     location: {
-	//       value: {
-	//       	latitude: undefined,
-	//       	longitude: undefined
-	// 	  }
-	//     }
-	//   }
-	// });
 
 
+	// // Create a new Y.PieModel class that extends Y.Model.
+	Y.StoreModel = Y.Base.create('storeModel', Y.Model, [Y.ModelSync.YQL], {
+		  ywsId: "7tXfk0MkQuPthFVrtTjL0w",
+		  queryString: 'select * from yelp.review.search where term="{term}" and location="{location}" and id="{storeId}" and ywsid="{ywsId}"',
+		  cache: new Y.CacheOffline,
+		  model: Y.StoreModel,
+		  buildQuery : function (options) {
+			  options || (options = {});
+
+			  return Y.Lang.sub(this.queryString, {
+				  term : 'free wifi coffee',
+				  location : options.postal || options.zip || options.city,
+				  storeid : e.storeId,
+				  ywsid : this.ywsid
+			  });
+		  }
+	}, {
+	  ATTRS: {
+	  	id : {},
+		address1 : {},
+		avg_rating : {},
+		city : {},
+		distance : {},
+		latitude : {},
+		longitude : {},
+		mobile_url: {},
+		name: {},
+		photo_url: {},
+		rating_img_url: {},
+		rating_img_url_small: {},
+		url: {}
+	  }
+	});
 
 
 
@@ -128,6 +160,32 @@ YUI.add('coffeespot', function(Y) {
 
 
 
+
+
+	Y.StoreList = Y.Base.create('storeList', Y.ModelList, [Y.ModelSync.YQL], {
+	  // Add prototype properties and methods for your List here if desired. These
+	  // will be available to all instances of your List.
+
+	  // Specifies that this list is meant to contain instances of Y.PieModel.
+	  ywsId: "7tXfk0MkQuPthFVrtTjL0w",
+	  queryString: 'select * from yelp.review.search where term="{term}" and location="{location}" and ywsid="{ywsId}"',
+	  cache: new Y.CacheOffline,
+	  model: Y.StoreModel,
+	  buildQuery : function (options) {
+		  options || (options = {});
+
+		  return Y.Lang.sub(this.queryString, {
+			  term : 'free wifi coffee',
+			  location : options.postal || options.zip || options.city,
+			  ywsId : this.ywsId
+		  });
+	  },
+
+	  parse : function (results) {
+		return results ? results.businesses : [];
+	  }
+
+	});
 
 
 
@@ -136,60 +194,43 @@ YUI.add('coffeespot', function(Y) {
 
 	/* LOCATION VIEW */
 
-	// Create a new Y.PieView class that extends Y.View and renders the current
-	// state of a Y.PieModel instance.
 	Y.LocationView = Y.Base.create('locationView', Y.View, [], {
-	  // Add prototype methods and properties for your View here if desired. These
-	  // will be available to all instances of your View. You may also override
-	  // existing default methods and properties of Y.View.
 
-	  // Override the default container element.
 	  container: Y.one('#location'),
-	  mapView: undefined,
 
-	  // Provide a template that will be used to render the view. The template can
-	  // be anything we want, but in this case we'll use a string that will be
-	  // processed with Y.Lang.sub().
-	  template: '<div class="input"><input class="xlarge" id="xlInput" name="xlInput" size="30" type="text" value="{value}"></div>',
+	  template: 'Searching near <span class="area">{value}</span>',
 
-	  // Specify delegated DOM events to attach to the container.
-	  events: {
-	    //'.eat': {click: 'eatSlice'}
+	  events: {},
+
+	  initializer: function (config) {
+		if (config) {
+			var model = config.model;
+			model.after('cityChange', this.render, this);
+			model.after('destroy', this.destroy, this);
+		}
+
+		this.container = Y.one('#location');
+
 	  },
 
-	  // The initializer function will run when a view is instantiated. This is a
-	  // good time to subscribe to change events on a model instance.
-	  initializer: function () {
-	  	var model = this.model;
-
-	  	//model.after('locationChange', this.render, this);
-	  	model.after('cityChange', this.render, this);
-	  	model.after('destroy', this.destroy, this);
-
-	  	this.container = Y.one('#location');
-
-	  	this.mapView = new Y.MapView({model: model});
-	  }, 
-
 	  render: function () {
-	    // Render this view's HTML into the container element.
-	    var self = this,
-	    location = this.model.get('location'),
-	    city = this.model.get('city'),
-	    html = '';
+		var location = this.model.get('location'),
+		addr = this.model.get('address'),
+		html = '';
 
-	    if (city) {
-	    	html = Y.Lang.sub(self.template, {
-	    		value: city
-	    	});
-	    }
-	    else {
-	    	html = Y.Lang.sub(self.template, {
-	    		value: location.latitude + ', ' + location.longitude
-	    	});
-	    }
+		if (addr) {
+			html = Y.Lang.sub(this.template, {
+				value: addr
+			});
+		}
+		else {
+			html = Y.Lang.sub(this.template, {
+				value: location.latitude + ', ' + location.longitude
+			});
+		}
 
-	    self.container.appendChild(html);
+		this.container.appendChild(html);
+
 	  }
 	});
 
@@ -216,50 +257,55 @@ YUI.add('coffeespot', function(Y) {
 		// Create a new Y.PieView class that extends Y.View and renders the current
 		// state of a Y.PieModel instance.
 		Y.MapView = Y.Base.create('mapView', Y.View, [], {
-		  // Add prototype methods and properties for your View here if desired. These
-		  // will be available to all instances of your View. You may also override
-		  // existing default methods and properties of Y.View.
 
-		  // Override the default container element.
 		  container: Y.one('#map'),
-
-		  // Provide a template that will be used to render the view. The template can
-		  // be anything we want, but in this case we'll use a string that will be
-		  // processed with Y.Lang.sub().
 		  template: '',
 
-		  // Specify delegated DOM events to attach to the container.
-		  events: {
-		    //'.eat': {click: 'eatSlice'}
-		  },
+		  events: {},
+		  map:undefined,
 
-		  // The initializer function will run when a view is instantiated. This is a
-		  // good time to subscribe to change events on a model instance.
-		  initializer: function () {
-		  	this.container = Y.one('#map');
-		  	var model = this.model;
-
-		  	model.after('locationChange', this.render, this);
-		  	model.after('destroy', this.destroy, this);
+		  initializer: function (config) {
+			this.container = Y.one('#map');
+			if (config) {
+				var model = config.model;
+				model.after('locationChange', this.render, this);
+				model.after('destroy', this.destroy, this);
+			}
 		  }, 
 
 		  render: function () {
 			// Render this view's HTML into the container element.
-			var latlng = new google.maps.LatLng(this.model.get('location').latitude, this.model.get('location').longitude);
-			var myOptions = {
-				zoom: 15,
+			var lat = this.model.get('location').latitude, lng = this.model.get('location').longitude,
+			latlng = new google.maps.LatLng(lat, lng),
+			myOptions = {
+				zoom: 11,
 				center: latlng,
 				disableDefaultUI: true,
-				mapTypeId: google.maps.MapTypeId.HYBRID
+				mapTypeId: google.maps.MapTypeId.ROADMAP
 			},
 			marker = new google.maps.Marker({
-			        position: latlng,
-			        title:"My location"
-			}),
-			map = new google.maps.Map(Y.one('#map').getDOMNode(),
+					position: latlng,
+					title:"My location"
+			});
+			this.map = new google.maps.Map(Y.one('#map').getDOMNode(),
 			myOptions);
 
-			marker.setMap(map);  
+			this.addMarker(latlng);
+ 
+		  },
+
+		  addMarker: function (latitude, longitude, title) {
+		  	var marker, latlng, icon;
+		  	latlng = (latitude instanceof google.maps.LatLng) ? latitude : new google.maps.LatLng(latitude, longitude);
+
+		  	icon = new google.maps.MarkerImage("./img/marker.png", null, null, null, new google.maps.Size(24,24));
+		  	marker = new google.maps.Marker({
+		  			icon: icon,
+		  			position: latlng,
+		  			title: title || null
+		  	});
+
+		  	marker.setMap(this.map);
 		  }
 		});
 
@@ -271,88 +317,290 @@ YUI.add('coffeespot', function(Y) {
 
 
 
-	/* APP VIEW */
 
-	CoffeeSpotAppView = Y.CoffeeSpotAppView = Y.Base.create('CoffeeSpotAppView', Y.View, [], {
-	    // The container node is the wrapper for this view.  All the view's events
-	    // will be delegated from the container. In this case, the #todo-app
-	    // node already exists on the page, so we don't need to create it.
-	    container: Y.one('body'),
 
-	    // The `template` property is a convenience property for holding a template
-	    // for this view. In this case, we'll use it to store the contents of the
-	    // #todo-stats-template element, which will serve as the template for the
-	    // statistics displayed at the bottom of the list.
-	    //template: Y.one('#todo-stats-template').getContent(),
 
-	    // This is where we attach DOM events for the view. The `events` object is a
-	    // mapping of selectors to an object containing one or more events to attach
-	    // to the node(s) matching each selector.
-	    events: {
-	        // Handle <enter> keypresses on the "new todo" input field.
-	        '#startLooking': {click: 'loadLanding'},
 
-	        // Clear all completed items from the list when the "Clear" link is
-	        // clicked.
-	        //'.todo-clear': {click: 'clearDone'},
 
-	        // Add and remove hover states on todo items.
-	        // '.todo-item': {
-	        //     mouseover: 'hoverOn',
-	        //     mouseout : 'hoverOff'
-	        // }
-	    },
+		/* LIST VIEW */
 
-	    // The initializer runs when a CoffeeSpotAppView instance is created, and gives
-	    // us an opportunity to set up the view.
-	    initializer: function () {
-	        // Create a new TodoList instance to hold the todo items.
-	        //var list = this.todoList = new TodoList();
+		Y.ListView = Y.Base.create('listView', Y.View, [], {
 
-	        // Update the display when a new item is added to the list, or when the
-	        // entire list is reset.
-	        //list.after('add', this.add, this);
-	        //list.after('reset', this.reset, this);
+		  container: Y.one('#resultList ul'),
 
-	        // Re-render the stats in the footer whenever an item is added, removed
-	        // or changed, or when the entire list is reset.
-	        //list.after(['add', 'reset', 'remove', 'todoModel:doneChange'],
-	               // this.render, this);
+		  template: '<li id={id}><h2>{title}</h2><h3>{address}</h3><img src="{ratingImage}"></li>',
 
-	        // Load saved items from localStorage, if available.
-	        //list.load();
-	    },
+		  events: {},
+		  scrollView: undefined,
 
-	    // The render function is called whenever a todo item is added, removed, or
-	    // changed, thanks to the list event handler we attached in the initializer
-	    // above.
-	    render: function () {
+		  initializer: function (config) {
+			if (config && config.modelList) {
+				// Store the modelList config value as a property on this view instance.
+				this.modelList = config.modelList;
+				// Re-render the view whenever a model is added to or removed from the
+				// model list, or when the entire list is refreshed.
+				this.modelList.after(['loaded'], this.render, this);
+			}
 
-	        // return this;
-	    },
+			this.container = Y.one('#resultList ul');
 
-	    // -- Event Handlers -------------------------------------------------------
+			if (Y.UA.iOS < 5) {
+				this.after('render', this.createScrollView);
+			}
 
-	    // Creates a new TodoView instance and renders it into the list whenever a
-	    // todo item is added to the list.
-	    loadLanding: function (e) {
-	    	var btn = Y.one('#startLooking'),
-	    	wrapper = Y.one('.wrapper'),
-	    	url = btn.get('href'),
+		  },
 
-	
-	    	successHandler = function() {
-	            Y.log('changed');
-	            var location  = new Y.LocationModel();
-	            var locationView = new Y.LocationView({model: location});
-	            location.findLocation();
-	            //locationView.render();
-	        };
+		  createScrollView: function () {
+		  	if (!(this.scrollView instanceof Y.ScrollView)) {
+		  		this.scrollView = new Y.ScrollView({
+		  			srcNode: '#resultList',
+		  			height: 260,
+	  			    flick: {
+	  			        minDistance:1,
+	  			        minVelocity:0.4,
+	  			        axis: "y"
+	  			    },
+	  			    deceleration: 0.983,
+	  			    bounce:0.65,		
+		  		});
 
-	        e.preventDefault();
-	        
-	        wrapper.load(url, '.wrapper', successHandler).removeClass('landing');
-	    }
+		  		Y.ScrollView.FRAME_STEP = 15;
+		  		Y.ScrollView.EASING = "cubic-bezier(0.000, 1.000, 0.320, 1.000)";	
+		  		this.scrollView.render();
+		  	}
+		  	else {
+		  		this.scrollView.syncUI();
+		  	}
+
+		  },
+
+		  render: function () {
+		  	var self = this,
+		  	i = 0,
+		  	ml = this.modelList,
+		  	html = '';
+
+		  	for (; i < ml.size(); i++) {
+		  		html += Y.Lang.sub(this.template, {
+		  			id: ml.item(i).get('id'),
+		  			title: ml.item(i).get('name'),
+		  			address: ml.item(i).get('address1') + ', ' + ml.item(i).get('city'),
+		  			ratingImage: ml.item(i).get('rating_img_url_small')
+		  		});
+
+		  		this.fire('process', {
+		  			latitude: ml.item(i).get('latitude'),
+		  			longitude: ml.item(i).get('longitude'),
+		  			title: ml.item(i).get('name')
+		  		});
+
+		  	}
+		  	this.container.appendChild(html);
+		  	this.fire('render');
+		  }
+		});
+
+
+
+
+
+
+
+
+
+
+
+	Y.StoreDetailView = Y.Base.create('StoreDetailView', Y.View, [], {
+
+		container: Y.one('#store-template'),
+		model: undefined,
+		popover: undefined,
+
+		initializer: function (config) {
+			this.model = config.model;
+			//this.container = Y.one('#store-template');
+		},
+
+		render: function () {
+
+			if (!this.popover) {
+				this.popover = new Y.Panel({
+					headerContent: this.model.get('name'),
+					bodyContent: this.container.getContent(),
+					width: 290,
+					zIndex: 200, //google maps seems to be around 100 so 200 is a safe zIndex
+					visible:true,
+					align: {
+						node: '#' + this.model.get('id'),
+						points: ["bc", "tc"]
+					},
+					buttons: [],
+					hideOn: [{
+						eventName: 'clickoutside'
+					}]
+				});
+				this.popover.render();
+			}
+
+			else {
+				this.popover.set('headerContent', this.model.get('name'));
+				this.popover.set('align', {
+					node: '#' + this.model.get('id'),
+					points: ["bc", "tc"]
+				});
+				this.popover.show();
+			}
+
+		}
 	});
 
-}, '3.4.0', { requires: ['app', 'node-load', 'gallery-geo', 'event-flick', 'cache-offline'] });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	Y.CoffeeSpot = Y.Base.create('coffeeSpot', Y.Controller, [], {
+		root: '/coffeespot',
+	     routes : [
+	     	 { path: '/', callback: 'handleIndex'},
+	         { path: '/locate', callback: 'handleLocate'},
+	         { path: '/locate/:id', callback: 'handleStore'}
+	     ],
+
+	     initializer : function () {
+	     	this.hideUrlBar();
+	     	this.store = new Y.StoreModel();
+	     	this.storeList = new Y.StoreList();
+	     	this.location = new Y.LocationModel();
+	     	this.mapView = new Y.MapView({model: this.location});
+
+	     	this.storeDetailView = null;
+	     	this.locationView = null;
+	     	this.listView = null;
+	     	self = this;
+
+	     	var init = function (e) {
+	     		var that = self;
+	     		self.locationView = new Y.LocationView({model: self.location});
+	     		self.listView = new Y.ListView({modelList: self.storeList});
+
+	     		self.listView.after('process', function(e) {
+	     			self.addMarker(e.latitude, e.longitude, e.title);
+	     		});
+
+	     		self.listView.after('render', function(e) {
+	     			Y.all('#resultList ul li').on('click', Y.bind(self.navigateToStore, self));
+	     		});
+	     	};
+
+	     	var showStores = function (e) {
+	     		self.showStores(e);
+	     	}
+
+	     	this.location.after('locationChange', init);
+	     	this.location.after('physicalLocationChange', showStores);
+
+
+	     	Y.one('#startLooking').on('click', Y.bind(this.navigateToLocate, this));
+
+
+
+	         // do initial dispatch
+	         if (window.navigator.standalone) {
+	             // iOS saved to home screen,
+	             // always route to / so geolocation lookup is preformed.
+	             this.replace('/');
+	         } else {
+	             this.dispatch();
+	         }
+	     },
+
+	     handleIndex : function (req) {
+	     	console.log('controller at /');
+	     	if (!Y.one('.wrapper').hasClass('landing')) {
+	     		Y.one('.wrapper').addClass('landing');
+	     	}
+	     	
+	     },
+
+	     handleLocate : function (req) {
+
+	     	var wrapper = Y.one('.wrapper'),
+	     	location = this.location;
+	     	
+	     	wrapper.setContent(Y.one('#locate-template').getContent()).removeClass('landing');
+	     	location.findLocation();
+
+	     },
+
+	     handleStore : function (req) {
+
+	     	var store = this.storeList.getById(req.params.id),
+	     	wrapper = Y.one('.wrapper');
+
+	     	//wrapper.setContent(Y.one('#store-template').getContent());
+	     	if (!this.storeDetailView) {
+	     		this.storeDetailView = new Y.StoreDetailView({model: store});
+	     	}
+	     	this.storeDetailView.render();
+	     },
+
+	     showStores : function (e) {
+	     	var storeList = this.storeList;
+	     	o = {
+	     		postal: e.postal,
+	     		zip: e.zip,
+	     		city: e.city
+	     	};
+	     	storeList.load(o, function() {
+
+	     		storeList.fire('loaded');
+
+	     		for (var i = 0; i < storeList._items.length; i++) {
+	     			console.log(storeList.item(i).get('url'));
+	     		}
+	     	});
+	     },
+
+	     addMarker: function (lat, lng, title) {
+	     	this.mapView.addMarker(lat,lng,title);
+	     },
+
+	     navigateToLocate: function (e) {
+	     	e.preventDefault();
+	     	this.save('/locate');
+	     },
+
+	     navigateToStore: function (e) {
+	     	e.preventDefault();
+	     	var id = e.currentTarget.get('id');
+	     	this.save('/locate/' + id);
+	     },
+
+	     hideUrlBar : Y.UA.ios && ! Y.UA.ipad ? function(){
+	         Y.later(1, Y.config.win, function(){
+	             this.scrollTo(0, 1);
+	         });
+	     } : function(){}
+
+	 });
+
+
+
+
+
+}, '3.4.0', { requires: ['app', 'node-load', 'gallery-geo', 'gallery-model-sync-yql', 'event-flick', 'cache-offline', 'scrollview', 'panel'] });
+
+
